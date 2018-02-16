@@ -15,3 +15,5 @@ Rotary Pulse decode as well as dial rate / make & break ratio **
 
 * BK can only decode, it does not display detected frequencies.
 ** BK can only count pulses, speed and ratio readings are helpful for reconditioning and recalibration.
+
+.
