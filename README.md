@@ -11,7 +11,7 @@ Device *must* provide the following:
 5. TX audio test with visual audio level indicator
 6. RX audio test with simulated dialtone 
 7. DTMF digit decode and freq display for tuning *
-8. Rotary Pulse decode as well as dial rate / make & break ratio **
+8. Rotary Pulse decode with dial rate / make & break ratio **
 
 * *BK can only decode, it does not display detected frequencies.
 * **BK can only count pulses, speed and ratio readings are helpful for reconditioning and recalibration.
