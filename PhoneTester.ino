@@ -68,9 +68,8 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);   // -- creating 
 #define BACKLIGHT_PIN     13
 
 //LCDBarGraph----------------
-LcdBarGraphX lbg0(&lcd, 4, 0, 3); // -- # of segments, position, line, 
-
-
+LcdBarGraphX lbg0(&lcd, 20, 0, 2); // -- # of segments, position, line, 
+byte i0 = 0;
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -91,15 +90,13 @@ void setup() {
   pinMode(rflPin, OUTPUT);
   digitalWrite(rflPin, 0);
   pinMode(ringTestPin, INPUT_PULLUP);
-
   Serial.begin(9600); // start serial for debug monitor
   lcd.home(); //go home 0,0
-  lcd.print("Telephone Tester");
-  lcd.setCursor (0, 1);
+  lcd.print("  Telephone Tester");
+  lcd.setCursor (2, 1);
   lcd.print("Ready..");
   //Serial.println("\nTelephone Tester Ready..");
-
-  state = IDLE_WAIT;
+   state = IDLE_WAIT;
 }
 int nochar_count = 0;
 float d_mags[8];
@@ -150,6 +147,13 @@ void loop() {
       Serial.println("Ringing.");
       state = RINGING;
     }
+   
+    if (shkState == LOW){
+       lbg0.drawValue( i0, 255);
+   delay(100);
+   i0 += 5;
+   }  
+    
     if (shkState == HIGH) {
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -289,8 +293,8 @@ void loop() {
       flushNumber();
       lcd.clear();
       lcd.home(); //go home 0,0
-      lcd.print("Telephone Tester");
-      lcd.setCursor (0, 1);
+      lcd.print("  Telephone Tester");
+      lcd.setCursor (2, 1);
       lcd.print("Ready..");
       lcd.setCursor(6, 3);
       lcd.print("On Hook");
@@ -397,4 +401,7 @@ void flushNumber() {
 /* Needed additional libraries and todo items
     LCDMenuLib2
     LcdBarGraphX
+
+
+
 */
