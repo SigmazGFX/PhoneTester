@@ -2,10 +2,10 @@
 DIY Project to create a device to replicate and exceed the capabilities of a BK 1045x phone product test device.
 
 
-Device *must* provide the following tests:
+Device *must* provide the following:
 
-1. Battery voltage
-2. Ring voltage
+1. Ring voltage
+2. Loop current (with this we get a free sidetone test, and power for device)
 3. On/Off Hook indication
 4. Polarity reversal
 5. TX audio test with visual audio level indicator
@@ -16,4 +16,5 @@ Device *must* provide the following tests:
 * *BK can only decode, it does not display detected frequencies.
 * **BK can only count pulses, speed and ratio readings are helpful for reconditioning and recalibration.
 
-.
+
+
