@@ -354,7 +354,7 @@ void flushNumber() {
 /* Needed additional libraries and todo items
  *  LCDMenuLib2
  *  LcdBarGraphX
- *  Newliquidcrystal_1.3.5
+ *  Newliquidcrystal_1.3.5  https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads/Newliquidcrystal_1.3.5.zip
  *  LCD instance config: LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);   // -- creating LCD instance
  *  Remove PCM audio data and use Tone() to generate 440hz simulated dialtone
 
