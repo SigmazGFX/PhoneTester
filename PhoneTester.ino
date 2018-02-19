@@ -60,9 +60,8 @@ int dialType = 1;           //toggles DTMF or Pulse detection 0-Pulse 1-DTMF
 int ringTest;
 byte pulses = 0;
 byte digit = 0;
-String number = "";
 byte state;
-int ringloop = 0;
+
 
 //I2CLCD
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);   // -- creating LCD instance
@@ -94,15 +93,15 @@ void setup() {
   Serial.begin(9600); // start serial for debug monitor
   lcd.home();
   lcd.clear();
-    lcd.print("--------------------" );
-    lcd.setCursor (0, 1);
-    lcd.print("| Telephone Tester |");
-    lcd.setCursor(0, 2);
-    lcd.print("|  2018 SIGMAZGFX  |");
-    lcd.setCursor(0, 3);
-    lcd.print("---------------------");
-delay(3000);
-lcd.clear();
+  lcd.print("--------------------" );
+  lcd.setCursor (0, 1);
+  lcd.print("| Telephone Tester |");
+  lcd.setCursor(0, 2);
+  lcd.print("|  2018 SIGMAZGFX  |");
+  lcd.setCursor(0, 3);
+  lcd.print("---------------------");
+  delay(3000);
+  lcd.clear();
   state = IDLE_WAIT;
 }
 int nochar_count = 0;
@@ -194,8 +193,6 @@ void loop() {
   //
   if (state == RINGING) {
 
-
-
     //Ringing Interval
     // How much time has passed, accounting for rollover with subtraction!
     if ((unsigned long)(currentMillis - ringPreviousMillis) >= ringInterval) {
@@ -246,7 +243,6 @@ void loop() {
       noTone(11);
     }
 
-
     // count groups of pulses on SHK (loop disconnect)
 
     if (pulses && (unsigned long)(currentMillis - lastShkRise) > tNewDig) {
@@ -268,12 +264,6 @@ void loop() {
       hookSpeed = (lastShkRise - lastShkFall);
       pulsePerSec = (1000 / (lastShkRise - lastShkFall));
 
-      if (digit == 0) {
-        digitTime = (hookSpeed * 10);
-      }
-      else {
-        digitTime = (hookSpeed * digit);
-      }
 
       lcd.setCursor(0, 3);
       lcd.print("                    ");
@@ -285,8 +275,6 @@ void loop() {
 
 
       //Serial.println(digit); // just for debug
-      // add digit to number string
-      number += (int)digit;
       dialType = 0;
       pulses = 0;
     }
@@ -295,18 +283,13 @@ void loop() {
     {
       detectTones();
     }
-
-
-
     if ((shkState == LOW) && (edge == 0)) {
       edge = 1;
     } else if ((shkState == HIGH) && (edge == 1)) {
       pulses++;
       //Serial.print(". "); // just for debug . . . . .
-
       edge = 0;
-
-     playDtone = 0; //Turn off dial tone simulation
+      playDtone = 0; //Turn off dial tone simulation
     }
 
     if ((shkState == LOW) && (unsigned long)(currentMillis - lastShkFall) > tHup) {
@@ -371,7 +354,6 @@ void detectTones()
 
   //added to normalize the magnitudes
   thischar = dtmf.button(d_mags, 20.);
-
   //thischar = dtmf.button(d_mags, 1800.);
 
   if (thischar) {
@@ -381,14 +363,10 @@ void detectTones()
     lcd.setCursor(0, 2);
     lcd.print("  Digit dialed: ");
     lcd.print(thischar);
-    
-
-
     playDtone = 0;  //Turn off dial tone simulation
-
     nochar_count = 0;
     // Print the magnitudes for debugging
-#define DEBUG_PRINT
+    //#define DEBUG_PRINT
 #ifdef DEBUG_PRINT
     for (int i = 0; i < 8; i++) {
       Serial.print("  ");
@@ -406,7 +384,8 @@ void detectTones()
 
 
 void flushNumber() {
- dialType = 1; //DTMF
+  dialType = 1; //DTMF
   pulses = 0;
   edge = 0;
 }
+
