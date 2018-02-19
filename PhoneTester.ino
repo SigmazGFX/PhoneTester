@@ -20,7 +20,6 @@ DTMF dtmf = DTMF(n, sampling_rate);
 //set up states of the machine
 #define IDLE_WAIT 1
 #define RINGING 2
-#define ACTIVE_CALL 3
 #define GETTING_NUMBER 4
 
 int sensorPin = A0;     // Analog pin used to sample audio for DTMF decoding
@@ -31,15 +30,15 @@ int sensorPin = A0;     // Analog pin used to sample audio for DTMF decoding
 #define dTonePin 11     // audio pin for simulated dialtone receiver test
 #define ringTestPin 12  // Pin assigned to start ring test
 
+unsigned long pulseDuration;
 #define oscInterval 25    //Frequency of Ringer pulse 25hz
 #define ringInterval 6000 //Time between rings
 #define ringDuration 1800 //Length of ring event
-#define statusCheckInterval 1000
+#define statusCheckInterval 100
 
 #define tNewDig 500     // time since last SHK rising edge before counting for next digit
-#define tHup 2000       // time since last SHK falling edge before hanging up/flushing number
-#define tComplete 6000  // time since last SHK rising edge before quit collecting #'s
-#define tDebounce 15    // debounce time
+#define tHup 1000       // time since last SHK falling edge before hanging up
+#define tDebounce 5    // debounce time
 
 unsigned long currentMillis = 0L;
 unsigned long oscPreviousMillis = 0L;
@@ -48,6 +47,10 @@ unsigned long statusPreviousMillis = 0L;
 unsigned long lastShkDebounce = 0L;
 unsigned long lastShkRise = 0L;
 unsigned long lastShkFall = 0L;
+
+int digitTime = 0;
+int hookSpeed = 0;
+int pulsePerSec = 0;
 int playDtone = 1;           // Play sinmulated dialtone
 int shkState = 0;           // LOW is on hook, HIGH is off hook
 int edge;
@@ -58,17 +61,15 @@ int ringTest;
 byte pulses = 0;
 byte digit = 0;
 String number = "";
-byte digits = 0;            // the number of digits we have collected
-//char numArray[20];
-
 byte state;
+int ringloop = 0;
 
 //I2CLCD
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);   // -- creating LCD instance
 #define BACKLIGHT_PIN     13
 
 //LCDBarGraph----------------
-LcdBarGraphX lbg0(&lcd, 20, 0, 2); // -- # of segments, position, line, 
+LcdBarGraphX lbg0(&lcd, 20, 0, 2); // -- # of segments, position, line,
 byte i0 = 0;
 
 
@@ -91,12 +92,18 @@ void setup() {
   digitalWrite(rflPin, 0);
   pinMode(ringTestPin, INPUT_PULLUP);
   Serial.begin(9600); // start serial for debug monitor
-  lcd.home(); //go home 0,0
-  lcd.print("  Telephone Tester");
-  lcd.setCursor (2, 1);
-  lcd.print("Ready..");
-  //Serial.println("\nTelephone Tester Ready..");
-   state = IDLE_WAIT;
+  lcd.home();
+  lcd.clear();
+    lcd.print("--------------------" );
+    lcd.setCursor (0, 1);
+    lcd.print("| Telephone Tester |");
+    lcd.setCursor(0, 2);
+    lcd.print("|  2018 SIGMAZGFX  |");
+    lcd.setCursor(0, 3);
+    lcd.print("---------------------");
+delay(3000);
+lcd.clear();
+  state = IDLE_WAIT;
 }
 int nochar_count = 0;
 float d_mags[8];
@@ -106,7 +113,6 @@ float d_mags[8];
 //
 
 void loop() {
-
 
 
   currentMillis = millis(); // get snapshot of time for debouncing and timing
@@ -143,17 +149,31 @@ void loop() {
   //
   if (state == IDLE_WAIT) {
     // wait for ring test or picking up reciever
+    lcd.home();
+    lcd.print("  Telephone Tester");
+    lcd.setCursor (0, 1);
+    lcd.print("  Ready..");
+    lcd.setCursor(0, 3);
+    lcd.print("      On Hook");
+
     if (ringTest) {
-      Serial.println("Ringing.");
+      lcd.home();
+      lcd.print("    Ringer Test    ");
+      lcd.setCursor(0, 1);
+      lcd.print("                    ");
+      lcd.setCursor(0, 2);
+      lcd.print("                    ");
+      lcd.setCursor(0, 2);
+      lcd.print("Sending ring current");
+      lcd.setCursor(0, 3);
+      lcd.print("                    ");
+      lcd.setCursor(0, 4);
+      lcd.print("                    ");
+
       state = RINGING;
     }
-   
-    if (shkState == LOW){
-       lbg0.drawValue( i0, 255);
-   delay(100);
-   i0 += 5;
-   }  
-    
+
+
     if (shkState == HIGH) {
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -173,7 +193,10 @@ void loop() {
   //  STATE RINGING
   //
   if (state == RINGING) {
-    // Ringing interval
+
+
+
+    //Ringing Interval
     // How much time has passed, accounting for rollover with subtraction!
     if ((unsigned long)(currentMillis - ringPreviousMillis) >= ringInterval) {
       digitalWrite (rcPin, 1); // Ring
@@ -182,6 +205,9 @@ void loop() {
     }
     if (digitalRead(rcPin) && ((unsigned long)(currentMillis - ringPreviousMillis) >= ringDuration)) {
       digitalWrite(rcPin, 0); // Silent after ring duration
+      lcd.setCursor(0, 2);
+
+
     }
     // 25Hz oscillation
     // How much time has passed, accounting for rollover with subtraction!
@@ -196,37 +222,18 @@ void loop() {
     if (shkState == HIGH) {
       digitalWrite(rcPin, 0); // stop ringing
       digitalWrite(hzPin, 0);
-      Serial.println("Answered. Loop initiated.");
-      state = ACTIVE_CALL;
+      lcd.setCursor(0, 3);
+      lcd.print("Handset Lifted");
     }
+
     if (!ringTest) {
       digitalWrite(rcPin, 0); // stop ringing
       digitalWrite(hzPin, 0);
-      Serial.println("Going back to idle.");
-      Serial.println("\nTelephone Tester Ready..");
+      lcd.clear();
       state = IDLE_WAIT;
     }
+  }
 
-  }
-  ////////////////////////////////////////////////////////////////////////////
-  //
-  //  STATE ACTIVE_CALL
-  //
-  if (state == ACTIVE_CALL) {
-    // keep state until on-hook
-    if ((shkState == LOW) && ((unsigned long)(currentMillis - lastShkFall) >= tHup)) {
-      //flush everything, then go idle
-      Serial.println("Hanging up. Going idle.");
-      flushNumber();
-      state = IDLE_WAIT;
-    }
-    if (!ringTest) {
-      flushNumber();
-      state = IDLE_WAIT;
-    }
-  }
-  ////////////////////////////////////////////////////////////////////////////
-  //
   //  STATE GETTING_NUMBER
   //
   if (state == GETTING_NUMBER) {
@@ -239,28 +246,47 @@ void loop() {
       noTone(11);
     }
 
+
     // count groups of pulses on SHK (loop disconnect)
 
     if (pulses && (unsigned long)(currentMillis - lastShkRise) > tNewDig) {
       // if there are pulses, check rising edge timer for complete digit timeout
-      //digit = pulses - 1; // one pulse is zero, ten pulses is nine (swedish system)
-      // for systems where ten pulses is zero, use code below instead:
+
       digit = pulses % 10;
       lcd.home();
       lcd.print("  Pulse Dial Test   ");
-      lcd.setCursor(4,3);
+      lcd.setCursor(4, 3);
       lcd.print("[");
-      lcd.setCursor(15,3);
+      lcd.setCursor(15, 3);
       lcd.print("]");
       lcd.setCursor(0, 2);
       lcd.print("Digit dialed: ");
       lcd.print(digit);
-     
-      
+
+      //pulse speed and PPS
+
+      hookSpeed = (lastShkRise - lastShkFall);
+      pulsePerSec = (1000 / (lastShkRise - lastShkFall));
+
+      if (digit == 0) {
+        digitTime = (hookSpeed * 10);
+      }
+      else {
+        digitTime = (hookSpeed * digit);
+      }
+
+      lcd.setCursor(0, 3);
+      lcd.print("                    ");
+      lcd.setCursor(0, 3);
+      lcd.print("PPS: ");
+      lcd.print(pulsePerSec);
+      lcd.print(" Hook mS: ");
+      lcd.print(hookSpeed);
+
+
       //Serial.println(digit); // just for debug
       // add digit to number string
       number += (int)digit;
-      digits++;
       dialType = 0;
       pulses = 0;
     }
@@ -270,23 +296,18 @@ void loop() {
       detectTones();
     }
 
+
+
     if ((shkState == LOW) && (edge == 0)) {
       edge = 1;
     } else if ((shkState == HIGH) && (edge == 1)) {
       pulses++;
-      lcd.setCursor(0, 3);
-      lcd.print("                    ");
-      lcd.setCursor((pulses) - 1 + 5, 3);
-      lcd.print("+");
       //Serial.print(". "); // just for debug . . . . .
+
       edge = 0;
 
-      playDtone = 0; //Turn off dial tone simulation
+     playDtone = 0; //Turn off dial tone simulation
     }
-
-    //if ((digits && (shkState == HIGH) && ((unsigned long)(currentMillis - lastShkRise) > tComplete)) || digits == 100) {
-    //  Serial.print("So many numbers!!");
-    //}
 
     if ((shkState == LOW) && (unsigned long)(currentMillis - lastShkFall) > tHup) {
       // reciever on hook, flush everything and go to idle state
@@ -298,12 +319,12 @@ void loop() {
       lcd.print("Ready..");
       lcd.setCursor(6, 3);
       lcd.print("On Hook");
-      Serial.println("On Hook");
-      //hookPrompt = 0;
       playDtone = 1;
       state = IDLE_WAIT;
     }
   }
+
+
 }  // END OF MAIN LOOP
 
 
@@ -354,14 +375,14 @@ void detectTones()
   //thischar = dtmf.button(d_mags, 1800.);
 
   if (thischar) {
-      lcd.clear();
-      lcd.home();
-      lcd.print("   DTMF Dial Test   ");
-      lcd.setCursor(0, 2);
-      lcd.print("  Digit dialed: ");
-      lcd.print(thischar);
-    //Serial.print(thischar);
+    lcd.clear();
+    lcd.home();
+    lcd.print("   DTMF Dial Test   ");
+    lcd.setCursor(0, 2);
+    lcd.print("  Digit dialed: ");
+    lcd.print(thischar);
     
+
 
     playDtone = 0;  //Turn off dial tone simulation
 
@@ -385,23 +406,7 @@ void detectTones()
 
 
 void flushNumber() {
-  digits = 0;
-  dialType = 1; //DTMF
-  number = "";
+ dialType = 1; //DTMF
   pulses = 0;
   edge = 0;
 }
-
-
-
-
-
-
-//--------------------------------------------------
-/* Needed additional libraries and todo items
-    LCDMenuLib2
-    LcdBarGraphX
-
-
-
-*/
